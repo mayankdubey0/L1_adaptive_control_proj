@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="DroneWithCable">
+  <compiler autolimits="true" assetdir="assets"/>
+  <option timestep="0.01" gravity="0 0 -9.81" density="1.225" viscosity="1.8e-5"/>
+
+  <default>
+    <default class="x2">
+      <geom mass="0"/>
+      <motor ctrlrange="0 13"/>
+      <mesh scale="0.01 0.01 0.01"/>
+      <default class="visual">
+        <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+      </default>
+      <default class="collision">
+        <geom group="3" type="box"/>
+        <default class="rotor">
+          <geom type="ellipsoid" size=".13 .13 .01"/>
+        </default>
+      </default>
+      <site group="5"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture type="2d" file="X2_lowpoly_texture_SpinningProps_1024.png"/>
+    <material name="phong3SG" texture="X2_lowpoly_texture_SpinningProps_1024"/>
+    <material name="invisible" rgba="0 0 0 0"/>
+    <mesh class="x2" file="X2_lowpoly.obj"/>
+
+    <texture name="grid" type="2d" builtin="checker" width="512" height="512"
+             rgb1="0.8 0.8 0.8" rgb2="0.2 0.2 0.2"/>
+    <material name="grid_mat" texture="grid" texrepeat="10 10" reflectance="0.2"/>
+  </asset>
+
+  <worldbody>
+    <camera name="overview" pos="0 -10 10" xyaxes="1 0 0 0 0.707 0.707"/>
+    <geom name="floor" type="plane" size="10 10 0.1" material="grid_mat" contype="1" conaffinity="1"/>
+
+    <!-- Movable ball anchor point for the cable -->
+    <body name="anchor" pos="0 0 0.05">
+      <freejoint/>
+      <geom type="sphere" size="0.05" mass="0.1" rgba="1 1 1 1"/>
+      <site name="anchor_site" pos="0 0 0" size="0.01"/>
+    </body>
+
+    <!-- Drone 1 tethered to anchor -->
+    <body name="drone1" pos="0.5 0.866 1.25" childclass="x2">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="1.0" diaginertia="0.01 0.01 0.02"/>
+      <site name="imu1" pos="0 0 .02"/>
+      <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .02"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .06"/>
+      <geom class="collision" size=".05 .027 .02" pos="-.07 0 .065"/>
+      <geom class="collision" size=".023 .017 .01" pos="-.137 .008 .065" quat="1 0 0 1"/>
+      <site name="tether_site_1" pos="0 0 0" size="0.01"/>
+      <site name="thrust1_1" pos="-.14 -.18 .05"/>
+      <site name="thrust2_1" pos="-.14 .18 .05"/>
+      <site name="thrust3_1" pos=".14 .18 .08"/>
+      <site name="thrust4_1" pos=".14 -.18 .08"/>
+    </body>
+
+    <!-- Drone 2 tethered to anchor -->
+    <body name="drone2" pos="2 0.866 1.25" childclass="x2">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="1.0" diaginertia="0.01 0.01 0.02"/>
+      <site name="imu2" pos="0 0 .02"/>
+      <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .02"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .06"/>
+      <geom class="collision" size=".05 .027 .02" pos="-.07 0 .065"/>
+      <geom class="collision" size=".023 .017 .01" pos="-.137 .008 .065" quat="1 0 0 1"/>
+      <site name="tether_site_2" pos="0 0 0" size="0.01"/>
+      <site name="thrust1_2" pos="-.14 -.18 .05"/>
+      <site name="thrust2_2" pos="-.14 .18 .05"/>
+      <site name="thrust3_2" pos=".14 .18 .08"/>
+      <site name="thrust4_2" pos=".14 -.18 .08"/>
+    </body>
+
+    <!-- Drone 3 tethered to anchor -->
+    <body name="drone3" pos="0.5 -0.866 1.25" childclass="x2">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="1.0" diaginertia="0.01 0.01 0.02"/>
+      <site name="imu3" pos="0 0 .02"/>
+      <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .02"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .06"/>
+      <geom class="collision" size=".05 .027 .02" pos="-.07 0 .065"/>
+      <geom class="collision" size=".023 .017 .01" pos="-.137 .008 .065" quat="1 0 0 1"/>
+      <site name="tether_site_3" pos="0 0 0" size="0.01"/>
+      <site name="thrust1_3" pos="-.14 -.18 .05"/>
+      <site name="thrust2_3" pos="-.14 .18 .05"/>
+      <site name="thrust3_3" pos=".14 .18 .08"/>
+      <site name="thrust4_3" pos=".14 -.18 .08"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- Drone 1 actuators -->
+    <motor name="thrust1_1" site="thrust1_1" class="x2" gear="0 0 1 0 0  .0201"/>
+    <motor name="thrust2_1" site="thrust2_1" class="x2" gear="0 0 1 0 0 -.0201"/>
+    <motor name="thrust3_1" site="thrust3_1" class="x2" gear="0 0 1 0 0  .0201"/>
+    <motor name="thrust4_1" site="thrust4_1" class="x2" gear="0 0 1 0 0 -.0201"/>
+
+    <!-- Drone 2 actuators -->
+    <motor name="thrust1_2" site="thrust1_2" class="x2" gear="0 0 1 0 0  .0201"/>
+    <motor name="thrust2_2" site="thrust2_2" class="x2" gear="0 0 1 0 0 -.0201"/>
+    <motor name="thrust3_2" site="thrust3_2" class="x2" gear="0 0 1 0 0  .0201"/>
+    <motor name="thrust4_2" site="thrust4_2" class="x2" gear="0 0 1 0 0 -.0201"/>
+
+    <!-- Drone 3 actuators -->
+    <motor name="thrust1_3" site="thrust1_3" class="x2" gear="0 0 1 0 0  .0201"/>
+    <motor name="thrust2_3" site="thrust2_3" class="x2" gear="0 0 1 0 0 -.0201"/>
+    <motor name="thrust3_3" site="thrust3_3" class="x2" gear="0 0 1 0 0  .0201"/>
+    <motor name="thrust4_3" site="thrust4_3" class="x2" gear="0 0 1 0 0 -.0201"/>
+  </actuator>
+
+  <tendon>
+    <!-- Drone→Anchor cables: slack until 0.5 m, then act as tension-only spring+damper -->
+    <spatial limited="true" range="0 10" rgba="0 .1 1 1" width=".005">
+      <site site="anchor_site"/>
+      <site site="tether_site_1"/>
+    </spatial>
+
+
+    <spatial limited="true" range="0 10" rgba="0 .1 1 1" width=".005">
+      <site site="anchor_site"/>
+      <site site="tether_site_2"/>
+    </spatial>
+
+    <spatial limited="true" range="0 10" rgba="0 .1 1 1" width=".005">
+      <site site="anchor_site"/>
+      <site site="tether_site_3"/>
+    </spatial>
+  </tendon>
+</mujoco>
