@@ -7,14 +7,6 @@ import matplotlib.pyplot as plt
 
 
 class L1AdaptiveController:
-    """
-    Proper matched L1 adaptive controller (discrete-time implementation)
-
-    Plant: x_dot = A x + B (u + theta)
-    Predictor: xhat_dot = A_m xhat + B (u + thetahat)
-    Adaptation: thetahat_dot = -Gamma * B^T P (x - xhat)
-    Control: u = u_baseline - C(s) thetahat
-    """
 
     def __init__(self, A, B, K, dt, gamma=200.0, bandwidth=10.0):
         self.A = A
@@ -26,13 +18,8 @@ class L1AdaptiveController:
         self.n = A.shape[0]
         self.m = B.shape[1]
 
-        # -------------------------------------------------
-        # Stable predictor dynamics (key L1 requirement)
-        # A_m = A - B K
-        # -------------------------------------------------
         self.Am = A - B @ K
 
-        # Lyapunov equation for predictor
         Qm = np.eye(self.n)
         self.P = solve_continuous_are(
             self.Am,
@@ -41,12 +28,11 @@ class L1AdaptiveController:
             np.eye(self.m)
         )
 
-        # States
         self.x_hat = np.zeros(self.n)
         self.theta_hat = np.zeros(self.m)
         self.u_ad = np.zeros(self.m)
 
-        # Projection bounds
+
         self.theta_max = 10.0
 
     def project(self, theta):
@@ -56,13 +42,10 @@ class L1AdaptiveController:
         return theta
 
     def update(self, x, u_baseline):
-        """
-        Update predictor and adaptive estimate
-        """
-        # Predictor error
+        
         e = x - self.x_hat
 
-        # Adaptive law (matched uncertainty)
+        # Adaptive law
         theta_dot = -self.gamma * (self.B.T @ self.P @ e)
         self.theta_hat = self.project(self.theta_hat + theta_dot * self.dt)
 
@@ -73,10 +56,7 @@ class L1AdaptiveController:
         return np.linalg.norm(e)
 
     def get_control(self):
-        """
-        Low-pass filtered adaptive control
-        """
-        # u_ad = -C(s) * theta_hat
+        
         u_desired = -self.theta_hat
 
         alpha = self.bandwidth * self.dt / (1.0 + self.bandwidth * self.dt)
@@ -122,7 +102,6 @@ class QuadcopterLQR:
             print(f"Error computing LQR gains: {e}")
             self.K = np.zeros((4, 12))
         
-        # Initialize L1 Adaptive Controller with conservative tuning
         self.dt = 1./240.
         self.l1_controller = L1AdaptiveController(
             A=self.A,
@@ -134,8 +113,6 @@ class QuadcopterLQR:
         )
         print("Proper L1 Adaptive Controller initialized")
 
-        
-        # Initialize error tracking
         self.time_history = []
         self.position_error_history = []
         self.velocity_error_history = []
@@ -178,9 +155,8 @@ class QuadcopterLQR:
             linkJointAxis=[[0, 0, 1]] * 4
         )
 
-        # Payload parameters
-        m_payload = 0.25 * self.m       # 0.125 kg
-        L_rope = 0.25                  # 0.25 m
+        m_payload = 0.25 * self.m
+        L_rope = 0.25
 
         # Create payload body (sphere)
         payload_col = p.createCollisionShape(p.GEOM_SPHERE, radius=0.05)
@@ -249,12 +225,10 @@ class QuadcopterLQR:
     def compute_control(self, state, target):
         error = state - target
 
-        # Baseline LQR
         u_hover = np.array([self.m * self.g, 0, 0, 0])
         u_feedback = -self.K @ error
         u_baseline = u_hover + u_feedback
 
-        # L1 adaptive augmentation
         if self.use_l1:
             prediction_error = self.l1_controller.update(state, u_baseline)
             u_adaptive = self.l1_controller.get_control()
@@ -266,7 +240,6 @@ class QuadcopterLQR:
             theta_hat_norm = 0.0
             u = u_baseline
 
-        # Saturation
         u[0] = np.clip(u[0], 0, 2.5 * self.m * self.g)
         u[1:4] = np.clip(u[1:4], -1.0, 1.0)
 
@@ -284,10 +257,11 @@ class QuadcopterLQR:
         p.applyExternalTorque(self.drone_id, -1, [tau_roll, tau_pitch, tau_yaw], p.WORLD_FRAME)
     
     def apply_wind(self, time_step):
+        wind_direction = np.pi/4
         wind_base = np.array([
-            self.wind_strength * np.sin(0.5 * time_step),
-            self.wind_strength * np.cos(0.3 * time_step),
-            0.5 * self.wind_strength * np.sin(0.2 * time_step)
+            self.wind_strength * np.sin(wind_direction),
+            self.wind_strength * np.cos(wind_direction),
+            0
         ])
         
         noise = np.random.randn(3) * 0.3 * self.wind_strength
@@ -297,7 +271,6 @@ class QuadcopterLQR:
         p.applyExternalForce(self.drone_id, -1, wind_force, pos, p.WORLD_FRAME)
     
     def track_error(self, state, target, current_time, u_adaptive, pred_error, theta_norm):
-        """Track different components of error"""
         error = state - target
         
         # Position error (x, y, z)
@@ -325,14 +298,14 @@ class QuadcopterLQR:
         self.theta_hat_history.append(theta_norm)
     
     def plot_errors(self):
-        """Plot the tracking errors"""
+        
         if self.use_l1:
             fig, axes = plt.subplots(3, 2, figsize=(14, 10))
         else:
             fig, axes = plt.subplots(2, 2, figsize=(12, 8))
         
         controller_name = "LQR + L1 Adaptive" if self.use_l1 else "LQR Only"
-        fig.suptitle(f'{controller_name} Controller - Tracking Error with Wind Disturbance', 
+        fig.suptitle(f'{controller_name} Controller - Tracking Error with Added Payload (No Wind)', 
                      fontsize=14, fontweight='bold')
         
         if self.use_l1:
@@ -461,10 +434,8 @@ class QuadcopterLQR:
             current_time = step * self.dt
             state = self.get_state()
             
-            # Compute control
             u, u_adaptive, pred_error, theta_norm = self.compute_control(state, target)
             
-            # Track error every step
             self.track_error(state, target, current_time, u_adaptive, pred_error, theta_norm)
             
             self.apply_control(u)
@@ -514,8 +485,7 @@ class QuadcopterLQR:
 
 
 if __name__ == "__main__":
-    # You can toggle L1 adaptive control on/off
-    USE_L1_ADAPTIVE = True
+    USE_L1_ADAPTIVE = False
     
     controller = QuadcopterLQR(wind_strength=0.0, use_l1=USE_L1_ADAPTIVE)
     
